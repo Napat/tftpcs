@@ -826,7 +826,15 @@ isnotvaliddir (char *pPath)	/* this function just makes sure that the directory 
 void
 usage (void)			/* prints program usage */
 {
-  printf
-    ("Usage: tftpd [options] [path]\nOptions:\n-d (debug mode)\n-h (help; this message)\n-P <port>\n-a <ack freqency. Default 1>\n-s <data chunk size in bytes. Default 512>\n");
+  printf(	"Usage: tftpd [options]\n"
+  			"Options:\n"
+  			"-d (debug mode)\n"
+  			"-h (help; this message)\n"
+  			"-P <port>\n"
+  			"-a <ack freqency. Default 1>\n"
+  			"-s <data chunk size in bytes. Default 512>\n"
+  			"-p <root path for tftp server>\n"
+  			"Note: default path is /tmp"
+  		);
   return;
 }
