@@ -21,4 +21,3 @@ COMMON_FLAG += $(CFLAGS)
 
 %.o: %.c
 	$(CC) $(COMMON_FLAG) -c -o $@ $<
-
