@@ -250,22 +250,36 @@ void tget(char *pFilename, struct sockaddr_in client, char *pMode, int tid)
 		}
 		return;
 	}
-	if (strchr(filename, 0x5C) || strchr(filename, 0x2F))	//look for illegal characters in the filename string these are \ and /
+	// if (strchr(filename, 0x5C) || strchr(filename, 0x2F))	//look for illegal characters in the filename string these are \ and /
+	// {
+	// 	if (debug)
+	// 		printf
+	// 		    ("Client requested to upload bad file: forbidden name\n");
+	// 	len =
+	// 	    sprintf((char *)packetbuf,
+	// 		    "%c%c%c%cIllegal filename.(%s) You may not attempt to descend or ascend directories.%c",
+	// 		    0x00, 0x05, 0x00, 0x00, filename, 0x00);
+	// 	if (sendto(sock, packetbuf, len, 0, (struct sockaddr *)&client, sizeof(client)) != len) {	/* send the data packet */
+	// 		printf
+	// 		    ("Mismatch in number of sent bytes while trying to send error packet\n");
+	// 	}
+	// 	return;
+
+	// }
+	if (strstr(filename, "..") != NULL)	//look for illegal string in the filename string ".."
 	{
 		if (debug)
-			printf
-			    ("Client requested to upload bad file: forbidden name\n");
+			printf("Client requested to upload bad file: forbidden name\n");
 		len =
 		    sprintf((char *)packetbuf,
-			    "%c%c%c%cIllegal filename.(%s) You may not attempt to descend or ascend directories.%c",
-			    0x00, 0x05, 0x00, 0x00, filename, 0x00);
+			    "%c%c%c%cIllegal filename.(%s) For security reasons you may not attempt to ascend directories.%c",
+		    0x00, 0x05, 0x00, 0x00, filename, 0x00);
 		if (sendto(sock, packetbuf, len, 0, (struct sockaddr *)&client, sizeof(client)) != len) {	/* send the data packet */
 			printf
 			    ("Mismatch in number of sent bytes while trying to send error packet\n");
 		}
 		return;
-
-	}
+	}	
 	strcpy(fullpath, path);
 	strncat(fullpath, filename, sizeof(fullpath) - 1);	//build the full file path by appending filename to path
 	fp = fopen(fullpath, "w");	/* open the file for writing */
@@ -501,21 +515,35 @@ void tsend(char *pFilename, struct sockaddr_in client, char *pMode, int tid)
 		}
 		return;
 	}
-	if (strchr(filename, 0x5C) || strchr(filename, 0x2F))	//look for illegal characters in the filename string these are \ and /
+	// if (strchr(filename, 0x5C) || strchr(filename, 0x2F))	//look for illegal characters in the filename string these are \ and /
+	// {
+	// 	if (debug)
+	// 		printf("Server requested bad file: forbidden name\n");
+	// 	len =
+	// 	    sprintf((char *)packetbuf[0],
+	// 		    "%c%c%c%cIllegal filename.(%s) You may not attempt to descend or ascend directories.%c",
+	// 		    0x00, 0x05, 0x00, 0x00, filename, 0x00);
+	// 	if (sendto(sock, packetbuf[0], len, 0, (struct sockaddr *)&client, sizeof(client)) != len) {	/* send the data packet */
+	// 		printf
+	// 		    ("Mismatch in number of sent bytes while trying to send error packet\n");
+	// 	}
+	// 	return;
+
+	// }
+	if (strstr(filename, "..") != NULL)	//look for illegal string in the filename string ".."
 	{
 		if (debug)
 			printf("Server requested bad file: forbidden name\n");
 		len =
 		    sprintf((char *)packetbuf[0],
-			    "%c%c%c%cIllegal filename.(%s) You may not attempt to descend or ascend directories.%c",
+			    "%c%c%c%cIllegal filename.(%s) For security reasons you may not attempt to ascend directories.%c",
 			    0x00, 0x05, 0x00, 0x00, filename, 0x00);
 		if (sendto(sock, packetbuf[0], len, 0, (struct sockaddr *)&client, sizeof(client)) != len) {	/* send the data packet */
 			printf
 			    ("Mismatch in number of sent bytes while trying to send error packet\n");
 		}
 		return;
-
-	}
+	}	
 	strcpy(fullpath, path);
 	strncat(fullpath, filename, sizeof(fullpath) - 1);	//build the full file path by appending filename to path
 	fp = fopen(fullpath, "r");
