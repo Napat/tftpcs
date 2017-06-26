@@ -1,5 +1,5 @@
 
-CROSS_COMPILE=/opt/codefidence/bin/mipsel-linux-
+#CROSS_COMPILE=/opt/codefidence/bin/mipsel-linux-
 
 CC 				= $(CROSS_COMPILE)gcc
 AR              = $(CROSS_COMPILE)ar
