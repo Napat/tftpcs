@@ -26,7 +26,7 @@ int req_packet(int opcode, char *filename, char *mode, char buf[]);
 /*a function to creat an ACK packet*/
 int ack_packet(int block, char buf[]);
 /*a function to create the Error packets*/
-int err_packet(int err_code, char *err_msg, char buf[]);
+int err_packet(int err_code, char *err_msg, char buf[], int bufsizef);
 /*a function that will print the ip:port pair of the server or client, plus data sent or recieved*/
 void ip_port(struct sockaddr_in host);
 /*a function to send a file to the server*/
@@ -240,9 +240,7 @@ void help(char *app)
 int req_packet(int opcode, char *filename, char *mode, char buf[])
 {
 	int len;
-	len =
-	    sprintf(buf, "%c%c%s%c%s%c", 0x00, opcode, filename, 0x00, mode,
-		    0x00);
+	len = sprintf(buf, "%c%c%s%c%s%c", 0x00, opcode, filename, 0x00, mode, 0x00);
 	if (len == 0) {
 		printf("Error in creating the request packet\n");	/*could not print to the client buffer */
 		exit(ERROR);
@@ -272,13 +270,11 @@ int ack_packet(int block, char buf[])
 }
 
 /* A function that will create an error packet based on the error code*/
-int err_packet(int err_code, char *err_msg, char buf[])
+int err_packet(int err_code, char *err_msg, char buf[], int bufsize)
 {
 	int len;
-	memset(buf, 0, sizeof(buf));
-	len =
-	    sprintf(buf, "%c%c%c%c%s%c", 0x00, ERR, 0x00, err_code, err_msg,
-		    0x00);
+	memset(buf, 0, bufsize);
+	len = sprintf(buf, "%c%c%c%c%s%c", 0x00, ERR, 0x00, err_code, err_msg, 0x00);
 	if (len == 0) {
 		printf("Error in creating the ACK packet\n");	/*could not print to the client buffer */
 		exit(ERROR);
@@ -292,8 +288,7 @@ int err_packet(int err_code, char *err_msg, char buf[])
 /* A function used for debuging to show the port numbers used*/
 void ip_port(struct sockaddr_in host)
 {
-	printf("The IP port pair for the host is: IP:%s Port:%d \n",
-	       inet_ntoa(host.sin_addr), ntohs(host.sin_port));
+	printf("The IP port pair for the host is: IP:%s Port:%d \n", inet_ntoa(host.sin_addr), ntohs(host.sin_port));
 }
 
 /*
@@ -302,10 +297,10 @@ void ip_port(struct sockaddr_in host)
 void tsend(char *pFilename, struct sockaddr_in server, char *pMode, int sock)
 {
 	int len, server_len, opcode, ssize = 0, n, i, j, bcount = 0, tid;
-	unsigned short int count = 0, rcount = 0, acked = 0;
+	unsigned short int count = 0, rcount = 0;
+	//unsigned short int acked = 0;
 	unsigned char filebuf[MAXDATASIZE + 1];
-	unsigned char packetbuf[MAXACKFREQ][MAXDATASIZE + 12],
-	    recvbuf[MAXDATASIZE + 12];
+	unsigned char packetbuf[MAXACKFREQ][MAXDATASIZE + 12], recvbuf[MAXDATASIZE + 12];
 	char filename[128], mode[12], *bufindex;	//fullpath[196],
 	struct sockaddr_in ack;
 
@@ -317,7 +312,7 @@ void tsend(char *pFilename, struct sockaddr_in server, char *pMode, int sock)
 	if (debug)
 		printf("Client: branched to file send function\n");
 
-/*At this point I have to wait to recieve an ACK from the server before I start sending the file*/
+	/*At this point I have to wait to recieve an ACK from the server before I start sending the file*/
 	/*open the file to read */
 	fp = fopen(filename, "r");
 	if (fp == NULL) {	//if the pointer is null then the file can't be opened - Bad perms OR no such file
@@ -332,8 +327,8 @@ void tsend(char *pFilename, struct sockaddr_in server, char *pMode, int sock)
 			       filename);
 
 	}
-//get ACK for WRQ
-/* The following 'for' loop is used to recieve/timeout ACKs */
+	//get ACK for WRQ
+	/* The following 'for' loop is used to recieve/timeout ACKs */
 	for (j = 0; j < RETRIES - 2; j++) {
 		server_len = sizeof(ack);
 		errno = EAGAIN;
@@ -353,32 +348,25 @@ void tsend(char *pFilename, struct sockaddr_in server, char *pMode, int sock)
 
 		if (n < 0 && errno != EAGAIN) {
 			if (debug)
-				printf
-				    ("Client: could not receive from the server (errno: %d n: %d)\n",
-				     errno, n);
+				printf("Client: could not receive from the server (errno: %d n: %d)\n",errno, n);
 			//resend packet
 		} else if (n < 0 && errno == EAGAIN) {
 			if (debug)
-				printf
-				    ("Client: Timeout waiting for ack (errno: %d n: %d)\n",
-				     errno, n);
+				printf("Client: Timeout waiting for ack (errno: %d n: %d)\n", errno, n);
 			//resend packet
 		} else {	/*changed client to server here */
 			if (server.sin_addr.s_addr != ack.sin_addr.s_addr) {	/* checks to ensure send to ip is same from ACK IP */
 				if (debug)
-					printf
-					    ("Client: Error recieving ACK (ACK from invalid address)\n");
+					printf("Client: Error recieving ACK (ACK from invalid address)\n");
 				j--;	/* in this case someone else connected to our port. Ignore this fact and retry getting the ack */
 				continue;
 			}
 			if (tid != ntohs(server.sin_port)) {	/* checks to ensure get from the correct TID */
 				if (debug)
-					printf
-					    ("Client: Error recieving file (data from invalid tid)\n");
-				len = err_packet(5, err_msg[5], buf);
+					printf("Client: Error recieving file (data from invalid tid)\n");
+				len = err_packet(5, err_msg[5], buf, BUFSIZ);
 				if (sendto(sock, buf, len, 0, (struct sockaddr *)&server, sizeof(server)) != len) {	/* send the data packet */
-					printf
-					    ("Client: Mismatch in number of sent bytes while trying to send mode error packet\n");
+					printf("Client: Mismatch in number of sent bytes while trying to send mode error packet\n");
 				}
 				/* if (debug)
 				   ip_port(server); */
@@ -397,13 +385,11 @@ void tsend(char *pFilename, struct sockaddr_in server, char *pMode, int sock)
 			rcount += (*bufindex++ & 0x00ff);
 			if (opcode != 4 || rcount != count) {	/* ack packet should have code 4 (ack) and should be acking the packet we just sent */
 				if (debug)
-					printf
-					    ("Client: Remote host failed to ACK proper data packet # %d (got OP: %d Block: %d)\n",
-					     count, opcode, rcount);
+					printf("Client: Remote host failed to ACK proper data packet # %d (got OP: %d Block: %d)\n", count, opcode, rcount);
 /* sending error message */
 				if (opcode > 5) {
 
-					len = err_packet(4, err_msg[4], buf);
+					len = err_packet(4, err_msg[4], buf, BUFSIZ);
 					if (sendto(sock, buf, len, 0, (struct sockaddr *)&server, sizeof(server)) != len) {	/* send the data packet */
 						printf
 						    ("Client: Mismatch in number of sent bytes while trying to send mode error packet\n");
@@ -414,9 +400,7 @@ void tsend(char *pFilename, struct sockaddr_in server, char *pMode, int sock)
 				   ip_port(server); */
 			} else {
 				if (debug)
-					printf
-					    ("Client: Remote host successfully ACK'd (#%d)\n",
-					     rcount);
+					printf("Client: Remote host successfully ACK'd (#%d)\n", rcount);
 				break;
 			}
 		}		//end of else
@@ -428,7 +412,7 @@ void tsend(char *pFilename, struct sockaddr_in server, char *pMode, int sock)
 
 	memset(filebuf, 0, sizeof(filebuf));	//clear the filebuf
 	while (1) {		/* our break statement will escape us when we are done */
-		acked = 0;
+		//acked = 0;
 		ssize = fread(filebuf, 1, datasize, fp);
 		if (debug) {
 			printf
@@ -450,9 +434,7 @@ void tsend(char *pFilename, struct sockaddr_in server, char *pMode, int sock)
 		packetbuf[bcount][2] = (count & 0xFF00) >> 8;	//fill in the count (top number first)
 		packetbuf[bcount][3] = (count & 0x00FF);	//fill in the lower part of the count
 		if (debug)
-			printf
-			    ("Client: Sending packet # %04d (length: %d file chunk: %d)\n",
-			     count, len, ssize);
+			printf("Client: Sending packet # %04d (length: %d file chunk: %d)\n", count, len, ssize);
 		/* send the data packet */
 		if (sendto
 		    (sock, packetbuf[bcount], len, 0,
@@ -464,9 +446,7 @@ void tsend(char *pFilename, struct sockaddr_in server, char *pMode, int sock)
 		}
 		if (debug) {
 			ip_port(server);
-			printf
-			    ("==count: %d  bcount: %d  ssize: %d  datasize: %d\n",
-			     count, bcount, ssize, datasize);
+			printf("==count: %d  bcount: %d  ssize: %d  datasize: %d\n", count, bcount, ssize, datasize);
 		}
 		//if ((count - 1) == 0 || ((count - 1) % ackfreq) == 0 || ssize != datasize)
 		if (((count) % ackfreq) == 0 || ssize != datasize) {
@@ -517,8 +497,7 @@ void tsend(char *pFilename, struct sockaddr_in server, char *pMode, int sock)
 							printf
 							    ("Client: Error recieving file (data from invalid tid)\n");
 						len =
-						    err_packet(5, err_msg[5],
-							       buf);
+						    err_packet(5, err_msg[5], buf, BUFSIZ);
 						/* send the data packet */
 						if (sendto
 						    (sock, buf, len, 0,
@@ -552,11 +531,7 @@ void tsend(char *pFilename, struct sockaddr_in server, char *pMode, int sock)
 							     rcount);
 						/* sending error message */
 						if (opcode > 5) {
-							len =
-							    err_packet(4,
-								       err_msg
-								       [4],
-								       buf);
+							len = err_packet(4, err_msg[4], buf, BUFSIZ);
 							if (sendto(sock, buf, len, 0, (struct sockaddr *)&server, sizeof(server)) != len) {	/* send the data packet */
 								printf
 								    ("Client: Mismatch in number of sent bytes while trying to send mode error packet\n");

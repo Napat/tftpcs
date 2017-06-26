@@ -171,7 +171,7 @@ int main(int argc, char **argv)
 			}
 		} else {
 			if (debug) {
-				printf("opcode: %x size: %d \n", opcode, sizeof(n));	/*show the message to the server */
+				printf("opcode: %x size: %ld \n", opcode, sizeof(n));	/*show the message to the server */
 			}
 		}
 
@@ -480,7 +480,8 @@ done:
 void tsend(char *pFilename, struct sockaddr_in client, char *pMode, int tid)
 {
 	int sock, len, client_len, opcode, ssize = 0, n, i, j, bcount = 0;
-	unsigned short int count = 0, rcount = 0, acked = 0;
+	unsigned short int count = 0, rcount = 0;
+	//unsigned short int acked = 0;
 	unsigned char filebuf[MAXDATASIZE + 1];
 	unsigned char packetbuf[MAXACKFREQ][MAXDATASIZE + 12],
 	    recvbuf[MAXDATASIZE + 12];
@@ -568,7 +569,7 @@ void tsend(char *pFilename, struct sockaddr_in client, char *pMode, int tid)
 	}
 	memset(filebuf, 0, sizeof(filebuf));
 	while (1) {		/* our break statement will escape us when we are done */
-		acked = 0;
+		//acked = 0;
 		ssize = fread(filebuf, 1, datasize, fp);
 
 		count++;	/* count number of datasize byte portions we read from the file */
